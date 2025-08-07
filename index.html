@@ -260,8 +260,9 @@
             height: auto;
             max-height: 100px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0);
             transition: transform 0.2s;
+            border: none;
         }
         
         #close-btn:active img {
@@ -375,8 +376,8 @@
             }
             
             .control-btn {
-                height: 80px;
-                font-size: 30px;
+                height: 90px;
+                font-size: 35px;
             }
         }
         
@@ -408,7 +409,7 @@
         
         @media (max-height: 600px) {
             .control-btn {
-                height: 40px;
+                height: 90px;
                 font-size: 16px;
             }
         }
@@ -438,10 +439,10 @@
                 <div class="score-box">Очки: <span id="current-score">0</span></div>
             </div>
             <button id="pause-btn">
-                <img src="pause.png" alt="Пауза" id="pause-icon">
+                <img src="../static/img/pause.png" alt="Пауза" id="pause-icon">
             </button>
             <button id="close-btn" class="wide-btn">
-                <img src="exit2.png" alt="Выход">
+                <img src="../static/img/exit2.png" alt="Выход">
             </button>
         </div>
     </div>
@@ -452,47 +453,42 @@
             <div class="modal-title">Игра окончена!</div>
             <div class="modal-score">Ваш счет: <span id="final-score">0</span></div>
             <div class="modal-highscore">Рекорд: <span id="final-highscore">0</span></div>
-            <button id="restart-btn" class="modal-btn">Играть снова</button>
+            <button id="restart-btn" class="modal-btn" onclick="window.close()">Играть снова</button>
         </div>
     </div>
 
     <script>
-
-
         document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем, работает ли скрипт в WebApp Telegram
-    if (window.Telegram && Telegram.WebApp) {
-        // Инициализируем WebApp
-        Telegram.WebApp.expand();
-        Telegram.WebApp.enableClosingConfirmation();
-        
-        // Отправляем данные в бота при первом посещении
-        if (!localStorage.getItem('tetris_visited')) {
-            try {
-                Telegram.WebApp.sendData(JSON.stringify({
-                    visited: true,
-                    timestamp: new Date().toISOString()
-                }));
-                localStorage.setItem('tetris_visited', 'true');
-            } catch (e) {
-                console.error('Error sending data to bot:', e);
+            // Проверяем, работает ли скрипт в WebApp Telegram
+            if (window.Telegram && Telegram.WebApp) {
+                // Инициализируем WebApp
+                Telegram.WebApp.expand();
+                Telegram.WebApp.enableClosingConfirmation();
+                
+                // Отправляем данные в бота при первом посещении
+                if (!localStorage.getItem('tetris_visited')) {
+                    try {
+                        Telegram.WebApp.sendData(JSON.stringify({
+                            visited: true,
+                            timestamp: new Date().toISOString()
+                        }));
+                        localStorage.setItem('tetris_visited', 'true');
+                    } catch (e) {
+                        console.error('Error sending data to bot:', e);
+                    }
+                }
             }
-        }
-    }
-    
-    // Дополнительная логика для отслеживания посещений
-    function handleVisibilityChange() {
-        if (document.visibilityState === 'visible' && !sessionStorage.getItem('tetris_active')) {
-            sessionStorage.setItem('tetris_active', 'true');
-            // Можно отправить дополнительное событие в бота
-        }
-    }
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-});
-
-
-
+            
+            // Дополнительная логика для отслеживания посещений
+            function handleVisibilityChange() {
+                if (document.visibilityState === 'visible' && !sessionStorage.getItem('tetris_active')) {
+                    sessionStorage.setItem('tetris_active', 'true');
+                    // Можно отправить дополнительное событие в бота
+                }
+            }
+            
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        });
 
         // Игровые константы
         const COLS = 10;
@@ -535,6 +531,7 @@
         let isHardDropping = false;
         let isAnimating = false;
         let cellWidth, cellHeight;
+        let dropIntervalId = null;
         
         // Элементы DOM
         const gameBoard = document.getElementById('game-board');
@@ -592,13 +589,25 @@
             leftBtn.addEventListener('mousedown', () => moveLeft());
             rightBtn.addEventListener('mousedown', () => moveRight());
             rotateBtn.addEventListener('mousedown', rotatePiece);
-            dropBtn.addEventListener('mousedown', hardDrop);
+            
+            // Измененное поведение кнопки сброса
+            dropBtn.addEventListener('mousedown', startSoftDrop);
+            dropBtn.addEventListener('mouseup', stopSoftDrop);
+            dropBtn.addEventListener('mouseleave', stopSoftDrop);
             
             // Для touch-устройств
             leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
             rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
             rotateBtn.addEventListener('touchstart', (e) => { e.preventDefault(); rotatePiece(); });
-            dropBtn.addEventListener('touchstart', (e) => { e.preventDefault(); hardDrop(); });
+            
+            dropBtn.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); 
+                startSoftDrop(); 
+            });
+            dropBtn.addEventListener('touchend', (e) => { 
+                e.preventDefault(); 
+                stopSoftDrop(); 
+            });
             
             restartBtn.addEventListener('click', resetGame);
             
@@ -636,7 +645,7 @@
                 } else {
                     // Вертикальный свайп
                     if (diffY > 50) {
-                        hardDrop();
+                        softDrop();
                     } else if (diffY < -30) {
                         rotatePiece();
                     }
@@ -645,6 +654,47 @@
             
             // Запуск игрового цикла
             requestAnimationFrame(gameLoop);
+        }
+        
+        // Начать мягкое падение (при зажатии кнопки)
+        function startSoftDrop() {
+            if (isPaused || gameOver || isAnimating) return;
+            
+            // Сначала сразу сдвигаем на 1 клетку
+            softDrop();
+            
+            // Затем устанавливаем интервал для повторения
+            dropIntervalId = setInterval(() => {
+                if (!isPaused && !gameOver && !isAnimating) {
+                    softDrop();
+                }
+            }, 100); // Интервал повторения (можно настроить)
+        }
+        
+        // Остановить мягкое падение
+        function stopSoftDrop() {
+            if (dropIntervalId) {
+                clearInterval(dropIntervalId);
+                dropIntervalId = null;
+            }
+        }
+        
+        // Мягкое падение (на 1 клетку вниз)
+        function softDrop() {
+            if (isPaused || gameOver || isAnimating) return;
+            
+            const moved = movePiece(0, 1);
+            if (moved) {
+                // Начисляем 1 очко за каждое мягкое падение
+                score += 1;
+                currentScoreElem.textContent = score;
+                
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreElem.textContent = highScore;
+                    localStorage.setItem('tetrisHighScore', highScore);
+                }
+            }
         }
         
         // Движение влево
@@ -756,6 +806,36 @@
             finalScoreElem.textContent = score;
             finalHighscoreElem.textContent = highScore;
             gameOverModal.style.display = 'flex';
+            
+            // Отправляем данные о проигрыше на сервер
+            sendGameOverData();
+        }
+        
+        // Отправка данных о проигрыше на сервер
+        function sendGameOverData() {
+            // Получаем user_id из URL параметров
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('user_id');
+            
+            const gameData = {
+                score: score,
+                user_id: userId
+            };
+            
+            fetch('/game_over', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(gameData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Game over data sent successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error sending game over data:', error);
+            });
         }
         
         // Отрисовка игрового поля
@@ -983,8 +1063,13 @@
                     localStorage.setItem('tetrisHighScore', highScore);
                 }
                 
-                // Ускорение игры
-                dropInterval = Math.max(100, 1000 - Math.floor(score / 100) * 50);
+                // Ускорение игры (с учетом ограничения после 1800 очков)
+                if (score < 1800) {
+                    dropInterval = Math.max(100, 1000 - Math.floor(score / 100) * 50);
+                } else {
+                    // После 1800 очков уменьшаем скорость в 2 раза
+                    dropInterval = Math.max(200, 2000 - Math.floor(score / 100) * 100);
+                }
                 
                 isAnimating = false;
                 draw();
@@ -1031,12 +1116,37 @@
             
             // Меняем иконку в зависимости от состояния паузы
             if (isPaused) {
-                pauseIcon.src = "continue.png";
+                pauseIcon.src = "../static/img/continue.png";
             } else {
-                pauseIcon.src = "pause.png";
+                pauseIcon.src = "../static/img/pause.png";
                 lastTime = performance.now();
                 dropCounter = 0;
             }
+            
+            // Отправляем данные о паузе на сервер
+            sendPauseData();
+        }
+        
+        // Отправка данных о паузе на сервер
+        function sendPauseData() {
+            const pauseData = {
+                paused: isPaused
+            };
+            
+            fetch('/pause', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pauseData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Pause data sent successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error sending pause data:', error);
+            });
         }
         
         // Обработка нажатий клавиш
@@ -1051,7 +1161,7 @@
                     movePiece(1, 0);
                     break;
                 case 40: // Вниз
-                    movePiece(0, 1);
+                    softDrop();
                     break;
                 case 38: // Вверх
                     rotatePiece();

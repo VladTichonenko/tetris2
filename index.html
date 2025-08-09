@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Мобильный Тетрис</title>
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --text-color: #ecf0f1;
+            --highlight-color: #f1c40f;
+            --cell-border: rgba(255, 255, 255, 0.1);
+            --panel-bg: rgba(0, 0, 0, 0.3);
+            --piece-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            --btn-gradient: linear-gradient(145deg, #3498db, #2980b9);
+            --btn-active-gradient: linear-gradient(145deg, #2980b9, #3498db);
+            --drop-btn-gradient: linear-gradient(145deg, #e74c3c, #c0392b);
+            --drop-btn-active-gradient: linear-gradient(145deg, #c0392b, #e74c3c);
+            --rotate-btn-gradient: linear-gradient(145deg, #2ecc71, #27ae60);
+            --rotate-btn-active-gradient: linear-gradient(145deg, #27ae60, #2ecc71);
+            --grid-line-color: rgba(255, 255, 255, 0.05);
+        }
+
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -13,14 +31,15 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #0066cc;
-            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), #1a1a2e);
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             touch-action: manipulation;
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
             height: 100vh;
             width: 100vw;
+            color: var(--text-color);
         }
         
         #game-container {
@@ -28,6 +47,8 @@
             flex-direction: row;
             height: 100%;
             width: 100%;
+            position: relative;
+            overflow: hidden;
         }
         
         #game-area {
@@ -35,112 +56,180 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
+            position: relative;
+            z-index: 1;
         }
         
         #game-board-container {
             flex: 1;
             position: relative;
             overflow: hidden;
+            padding: 10px;
         }
         
         #game-board {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, 
-                rgba(0, 51, 102, 0.8) 0%, 
-                rgba(0, 102, 204, 0.8) 25%, 
-                rgba(51, 153, 255, 0.8) 50%, 
-                rgba(102, 178, 255, 0.8) 75%, 
-                rgba(153, 204, 255, 0.8) 100%);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.2) 0%,
+                rgba(0, 0, 0, 0.3) 100%
+            );
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
             position: relative;
             display: grid;
             grid-template-columns: repeat(10, 1fr);
             grid-template-rows: repeat(20, 1fr);
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 0 0 1px var(--grid-line-color);
+            backdrop-filter: blur(5px);
+            overflow: hidden;
         }
         
         .cell {
             box-sizing: border-box;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--cell-border);
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        
+        .cell::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1px solid var(--grid-line-color);
+            pointer-events: none;
         }
         
         #side-panel {
-            width: 150px;
-            background-color: rgba(0, 0, 0, 0.2);
+            width: 160px;
+            background: var(--panel-bg);
             display: flex;
             flex-direction: column;
             padding: 15px;
             flex-shrink: 0;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            z-index: 2;
+        }
+        
+        #next-piece-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        
+        #next-piece-label {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            color: var(--highlight-color);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
         }
         
         #next-piece {
             width: 100%;
-            height: 150px;
-            background-color: rgba(255, 255, 255, 0.2);
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            margin-bottom: 20px;
             position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
         
         #score-panel {
             display: flex;
             flex-direction: column;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
         .score-box {
-            background-color: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
             color: white;
             padding: 12px;
             border-radius: 10px;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             font-size: 16px;
             text-align: center;
             font-weight: bold;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .score-box::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--highlight-color);
+        }
+        
+        .score-value {
+            font-size: 20px;
+            color: var(--highlight-color);
+            margin-top: 5px;
+            display: block;
         }
         
         .piece {
             position: absolute;
             box-sizing: border-box;
-            border: 1px solid rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-            transition: transform 0.1s;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            box-shadow: var(--piece-shadow);
+            transition: transform 0.1s ease-out;
+            z-index: 2;
         }
         
         .fixed-block {
             position: absolute;
             box-sizing: border-box;
-            border: 1px solid rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            box-shadow: var(--piece-shadow);
             transition: transform 0.1s, opacity 0.3s;
+            z-index: 1;
         }
         
         .score-popup {
             position: absolute;
-            color: white;
-            font-size: 24px;
+            color: var(--highlight-color);
+            font-size: 28px;
             font-weight: bold;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
             animation: scoreFade 1s forwards;
             pointer-events: none;
             z-index: 10;
+            font-family: 'Arial Black', sans-serif;
         }
         
         @keyframes scoreFade {
             0% {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
+            }
+            50% {
+                opacity: 0.9;
+                transform: translateY(-25px) scale(1.2);
             }
             100% {
                 opacity: 0;
-                transform: translateY(-50px);
+                transform: translateY(-50px) scale(1.5);
             }
         }
         
         .line-clear {
-            animation: lineClear 0.5s forwards;
+            animation: lineClear 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
         }
         
         @keyframes lineClear {
@@ -149,8 +238,9 @@
                 opacity: 1;
             }
             50% {
-                transform: scale(1.1);
+                transform: scale(1.2);
                 opacity: 0.8;
+                background-color: var(--highlight-color);
             }
             100% {
                 transform: scale(0);
@@ -161,39 +251,42 @@
         #controls {
             display: flex;
             flex-direction: column;
-            padding: 10px;
-            background-color: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            background: var(--panel-bg);
             width: 100%;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 2;
         }
         
         .control-row {
             display: flex;
             justify-content: space-between;
             width: 100%;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
+            gap: 10px;
         }
         
         .control-btn {
-            background: linear-gradient(145deg, #ff9900, #e68a00);
+            background: var(--btn-gradient);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 24px;
-            height: 60px;
+            height: 70px;
             flex: 1;
-            margin: 0 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
-                        inset 0 -3px 0 rgba(0, 0, 0, 0.2),
-                        inset 0 3px 0 rgba(255, 255, 255, 0.2);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2),
+                        inset 0 -4px 0 rgba(0, 0, 0, 0.2),
+                        inset 0 4px 0 rgba(255, 255, 255, 0.1);
             touch-action: manipulation;
             position: relative;
             overflow: hidden;
             min-width: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         
         .control-btn::after {
@@ -203,37 +296,42 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.1);
+            background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
             opacity: 0;
             transition: opacity 0.2s;
         }
         
         .control-btn:active {
-            transform: translateY(3px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2),
-                       inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-                       inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(4px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                       inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
         
         .control-btn:active::after {
             opacity: 1;
         }
         
-        .wide-btn {
-            width: 100%;
-            font-size: 20px;
-            height: auto;
-            padding: 12px 0;
-            border-radius: 10px;
-            background: linear-gradient(145deg, #ff9900, #e68a00);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
-                        inset 0 -3px 0 rgba(0, 0, 0, 0.2),
-                        inset 0 3px 0 rgba(255, 255, 255, 0.2);
+        #rotate-btn {
+            background: var(--rotate-btn-gradient);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2),
+                        inset 0 -4px 0 rgba(0, 0, 0, 0.2),
+                        inset 0 4px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        #rotate-btn:active {
+            background: var(--rotate-btn-active-gradient);
         }
         
         #drop-btn {
-            background: linear-gradient(145deg, #ff3333, #cc0000);
+            background: var(--drop-btn-gradient);
             position: relative;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2),
+                        inset 0 -4px 0 rgba(0, 0, 0, 0.2),
+                        inset 0 4px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        #drop-btn:active {
+            background: var(--drop-btn-active-gradient);
         }
         
         #drop-btn::before {
@@ -241,57 +339,32 @@
             position: absolute;
             font-size: 32px;
             color: white;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         
-        /* Кнопка выхода как картинка */
-        #close-btn {
-            background: none;
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
             border: none;
-            padding: 0;
-            margin-top: 15px;
+            border-radius: 12px;
+            padding: 12px;
             cursor: pointer;
+            transition: all 0.2s;
             display: flex;
             justify-content: center;
             align-items: center;
-        }
-        
-        #close-btn img {
-            width: 100%;
-            height: auto;
-            max-height: 100px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0);
-            transition: transform 0.2s;
-            border: none;
-        }
-        
-        #close-btn:active img {
-            transform: scale(0.95);
-        }
-        
-        /* Кнопка паузы как картинка */
-        #pause-btn {
-            background: none;
-            border: none;
-            padding: 0;
-            margin-bottom: 15px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        #pause-btn img {
-            width: 100%;
-            height: auto;
-            max-height: 100px;
-            border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s;
+            margin-bottom: 15px;
         }
         
-        #pause-btn:active img {
+        .action-btn:active {
             transform: scale(0.95);
+        }
+        
+        .action-btn img {
+            width: 100%;
+            height: auto;
+            max-height: 40px;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
         }
         
         /* Модальное окно */
@@ -301,13 +374,14 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100;
+            z-index: 1000;
             opacity: 0;
             animation: fadeIn 0.3s forwards;
+            backdrop-filter: blur(5px);
         }
         
         @keyframes fadeIn {
@@ -315,54 +389,91 @@
         }
         
         .modal-content {
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 15px;
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            padding: 30px;
+            border-radius: 20px;
             text-align: center;
             max-width: 90%;
-            width: 300px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 350px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--highlight-color);
         }
         
         .modal-title {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            margin-bottom: 15px;
-            color: #0066cc;
+            margin-bottom: 20px;
+            color: var(--highlight-color);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .modal-score {
-            font-size: 20px;
-            margin-bottom: 10px;
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: var(--text-color);
         }
         
         .modal-highscore {
-            font-size: 18px;
-            color: #ff9900;
+            font-size: 20px;
+            color: var(--highlight-color);
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         
         .modal-btn {
-            background-color: #ff9900;
+            background: var(--btn-gradient);
             color: white;
             border: none;
-            border-radius: 10px;
-            padding: 12px 24px;
-            font-size: 16px;
-            margin: 5px;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 8px;
             cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            width: calc(100% - 16px);
         }
         
+        .modal-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Анимация фона */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+        }
+        
+        /* Адаптивность */
         @media (max-width: 768px) {
             #side-panel {
-                width: 120px;
+                width: 140px;
                 padding: 12px;
             }
             
             #next-piece {
-                height: 120px;
-                margin-bottom: 15px;
+                height: 110px;
             }
             
             .score-box {
@@ -370,52 +481,110 @@
                 padding: 10px;
             }
             
-            .wide-btn {
-                font-size: 16px;
-                padding: 10px 0;
+            .score-value {
+                font-size: 18px;
             }
             
             .control-btn {
-                height: 90px;
-                font-size: 35px;
+                height: 60px;
+                font-size: 22px;
             }
         }
         
         @media (max-width: 480px) {
+            #game-container {
+                flex-direction: column;
+            }
+            
             #side-panel {
-                width: 110px;
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
                 padding: 10px;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            #next-piece-container {
+                width: 100px;
+                margin-right: 10px;
+                margin-bottom: 0;
             }
             
             #next-piece {
-                height: 100px;
+                height: 80px;
+            }
+            
+            #score-panel {
+                flex-direction: row;
+                margin-bottom: 0;
+                gap: 10px;
+                flex: 1;
             }
             
             .score-box {
+                flex: 1;
+                margin-bottom: 0;
+                padding: 8px;
                 font-size: 12px;
+            }
+            
+            .score-value {
+                font-size: 16px;
+            }
+            
+            .action-btn {
+                margin-bottom: 0;
+                margin-right: 10px;
                 padding: 8px;
             }
             
-            .wide-btn {
-                font-size: 14px;
+            .control-btn {
+                height: 50px;
+                font-size: 20px;
             }
             
-            .control-btn {
-                height: 45px;
-                font-size: 18px;
-                margin: 0 3px;
+            #drop-btn::before {
+                font-size: 28px;
             }
         }
         
         @media (max-height: 600px) {
             .control-btn {
-                height: 90px;
-                font-size: 16px;
+                height: 50px;
+                font-size: 18px;
+            }
+            
+            #next-piece {
+                height: 80px;
+            }
+        }
+        
+        /* Эффект частиц для завершенных линий */
+        .particle {
+            position: absolute;
+            background-color: var(--highlight-color);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: particleFade 1s forwards;
+        }
+        
+        @keyframes particleFade {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty));
+                opacity: 0;
             }
         }
     </style>
 </head>
 <body>
+    <div class="bg-animation" id="bg-animation"></div>
+    
     <div id="game-container">
         <div id="game-area">
             <div id="game-board-container">
@@ -427,22 +596,36 @@
                     <button class="control-btn" id="left-btn">←</button>
                     <button class="control-btn" id="rotate-btn">↻</button>
                     <button class="control-btn" id="right-btn">→</button>
+                </div>
+                <div class="control-row">
                     <button class="control-btn" id="drop-btn"></button>
                 </div>
             </div>
         </div>
         
         <div id="side-panel">
-            <div id="next-piece"></div>
-            <div id="score-panel">
-                <div class="score-box">Рекорд: <span id="high-score">0</span></div>
-                <div class="score-box">Очки: <span id="current-score">0</span></div>
+            <div id="next-piece-container">
+                <div id="next-piece-label">СЛЕДУЮЩАЯ</div>
+                <div id="next-piece"></div>
             </div>
-            <button id="pause-btn">
-                <img src="../static/img/pause.png" alt="Пауза" id="pause-icon">
+            
+            <div id="score-panel">
+                <div class="score-box">
+                    РЕКОРД
+                    <span class="score-value" id="high-score">0</span>
+                </div>
+                <div class="score-box">
+                    ОЧКИ
+                    <span class="score-value" id="current-score">0</span>
+                </div>
+            </div>
+            
+            <button id="pause-btn" class="action-btn">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTE4NCA0ODBWNDhIMzI4VjQ4MEgxODRaIi8+PC9zdmc+" alt="Пауза" id="pause-icon">
             </button>
-            <button id="close-btn" class="wide-btn">
-                <img src="../static/img/exit2.png" alt="Выход">
+            
+            <button id="close-btn" class="action-btn">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTM0Mi42IDE1MC42YzEyLjUtMTIuNSAxMi41LTMyLjggMC00NS4zcy0zMi44LTEyLjUtNDUuMyAwTDE5MiAyMDYuNyA4Ni42IDEwMS40Yy0xMi41LTEyLjUtMzIuOC0xMi41LTQ1LjMgMHMtMTIuNSAzMi44IDAgNDUuM0wxNDYuNyAyNTIgNDEuNCAzNTcuNGMtMTIuNSAxMi41LTEyLjUgMzIuOCAwIDQ1LjNzMzIuOCAxMi41IDQ1LjMgMEwxOTIgMjk3LjNsMTA1LjQgMTA1LjNjMTIuNSAxMi41IDMyLjggMTIuNSA0NS4zIDBzMTIuNS0zMi44IDAtNDUuM0wyMzcuMyAyNTJsMTA1LjMtMTA1LjR6Ii8+PC9zdmc+" alt="Выход">
             </button>
         </div>
     </div>
@@ -450,10 +633,11 @@
     <!-- Модальное окно -->
     <div id="game-over-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-title">Игра окончена!</div>
+            <div class="modal-title">ИГРА ОКОНЧЕНА!</div>
             <div class="modal-score">Ваш счет: <span id="final-score">0</span></div>
             <div class="modal-highscore">Рекорд: <span id="final-highscore">0</span></div>
-            <button id="restart-btn" class="modal-btn" onclick="window.close()">Играть снова</button>
+            <button id="restart-btn" class="modal-btn">Играть снова</button>
+            <button id="exit-btn" class="modal-btn">Выход</button>
         </div>
     </div>
 
@@ -478,6 +662,45 @@
                     }
                 }
             }
+            
+            // Анимация фона
+            const bgAnimation = document.getElementById('bg-animation');
+            function createBackgroundAnimation() {
+                bgAnimation.innerHTML = '';
+                const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6'];
+                
+                for (let i = 0; i < 20; i++) {
+                    const shape = document.createElement('div');
+                    shape.style.position = 'absolute';
+                    shape.style.width = `${Math.random() * 100 + 50}px`;
+                    shape.style.height = shape.style.width;
+                    shape.style.left = `${Math.random() * 100}%`;
+                    shape.style.top = `${Math.random() * 100}%`;
+                    shape.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    shape.style.opacity = '0.1';
+                    shape.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    shape.style.filter = 'blur(20px)';
+                    shape.style.animation = `float ${Math.random() * 20 + 10}s infinite alternate ease-in-out`;
+                    
+                    const keyframes = `
+                        @keyframes float {
+                            0% {
+                                transform: translate(0, 0) rotate(0deg);
+                            }
+                            100% {
+                                transform: translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px) rotate(${Math.random() * 360}deg);
+                            }
+                        }
+                    `;
+                    
+                    const style = document.createElement('style');
+                    style.innerHTML = keyframes;
+                    bgAnimation.appendChild(style);
+                    bgAnimation.appendChild(shape);
+                }
+            }
+            
+            createBackgroundAnimation();
             
             // Дополнительная логика для отслеживания посещений
             function handleVisibilityChange() {
@@ -532,6 +755,8 @@
         let isAnimating = false;
         let cellWidth, cellHeight;
         let dropIntervalId = null;
+        let leftIntervalId = null;
+        let rightIntervalId = null;
         
         // Элементы DOM
         const gameBoard = document.getElementById('game-board');
@@ -549,6 +774,7 @@
         const finalScoreElem = document.getElementById('final-score');
         const finalHighscoreElem = document.getElementById('final-highscore');
         const restartBtn = document.getElementById('restart-btn');
+        const exitBtn = document.getElementById('exit-btn');
         
         // Инициализация игрового поля
         function initGameBoard() {
@@ -564,6 +790,14 @@
                     cell.className = 'cell';
                     cell.dataset.row = row;
                     cell.dataset.col = col;
+                    
+                    // Добавляем градиент для ячеек
+                    cell.style.background = `linear-gradient(
+                        to bottom right,
+                        rgba(255, 255, 255, ${0.02 + Math.random() * 0.03}),
+                        rgba(255, 255, 255, ${0.01 + Math.random() * 0.02})
+                    )`;
+                    
                     gameBoard.appendChild(cell);
                 }
             }
@@ -586,18 +820,29 @@
                 }
             });
             
-            leftBtn.addEventListener('mousedown', () => moveLeft());
-            rightBtn.addEventListener('mousedown', () => moveRight());
+            // Обработчики для кнопок влево/вправо с повторением при зажатии
+            leftBtn.addEventListener('mousedown', startLeftMove);
+            leftBtn.addEventListener('mouseup', stopLeftMove);
+            leftBtn.addEventListener('mouseleave', stopLeftMove);
+            
+            rightBtn.addEventListener('mousedown', startRightMove);
+            rightBtn.addEventListener('mouseup', stopRightMove);
+            rightBtn.addEventListener('mouseleave', stopRightMove);
+            
             rotateBtn.addEventListener('mousedown', rotatePiece);
             
-            // Измененное поведение кнопки сброса
+            // Для кнопки падения
             dropBtn.addEventListener('mousedown', startSoftDrop);
             dropBtn.addEventListener('mouseup', stopSoftDrop);
             dropBtn.addEventListener('mouseleave', stopSoftDrop);
             
             // Для touch-устройств
-            leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
-            rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
+            leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startLeftMove(); });
+            leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopLeftMove(); });
+            
+            rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRightMove(); });
+            rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRightMove(); });
+            
             rotateBtn.addEventListener('touchstart', (e) => { e.preventDefault(); rotatePiece(); });
             
             dropBtn.addEventListener('touchstart', (e) => { 
@@ -610,6 +855,7 @@
             });
             
             restartBtn.addEventListener('click', resetGame);
+            exitBtn.addEventListener('click', () => window.close());
             
             // Сенсорные события для управления свайпами
             let touchStartX = 0;
@@ -656,6 +902,52 @@
             requestAnimationFrame(gameLoop);
         }
         
+        // Начать движение влево (с повторением)
+        function startLeftMove() {
+            if (isPaused || gameOver || isAnimating) return;
+            
+            // Сначала сразу сдвигаем на 1 клетку
+            moveLeft();
+            
+            // Затем устанавливаем интервал для повторения
+            leftIntervalId = setInterval(() => {
+                if (!isPaused && !gameOver && !isAnimating) {
+                    moveLeft();
+                }
+            }, 100); // Интервал повторения
+        }
+        
+        // Остановить движение влево
+        function stopLeftMove() {
+            if (leftIntervalId) {
+                clearInterval(leftIntervalId);
+                leftIntervalId = null;
+            }
+        }
+        
+        // Начать движение вправо (с повторением)
+        function startRightMove() {
+            if (isPaused || gameOver || isAnimating) return;
+            
+            // Сначала сразу сдвигаем на 1 клетку
+            moveRight();
+            
+            // Затем устанавливаем интервал для повторения
+            rightIntervalId = setInterval(() => {
+                if (!isPaused && !gameOver && !isAnimating) {
+                    moveRight();
+                }
+            }, 100); // Интервал повторения
+        }
+        
+        // Остановить движение вправо
+        function stopRightMove() {
+            if (rightIntervalId) {
+                clearInterval(rightIntervalId);
+                rightIntervalId = null;
+            }
+        }
+        
         // Начать мягкое падение (при зажатии кнопки)
         function startSoftDrop() {
             if (isPaused || gameOver || isAnimating) return;
@@ -668,7 +960,7 @@
                 if (!isPaused && !gameOver && !isAnimating) {
                     softDrop();
                 }
-            }, 100); // Интервал повторения (можно настроить)
+            }, 100); // Интервал повторения
         }
         
         // Остановить мягкое падение
@@ -774,8 +1066,9 @@
                         block.style.width = `${size}px`;
                         block.style.height = `${size}px`;
                         block.style.backgroundColor = nextPiece.color;
-                        block.style.border = '1px solid rgba(0, 0, 0, 0.3)';
-                        block.style.borderRadius = '3px';
+                        block.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+                        block.style.borderRadius = '4px';
+                        block.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.3)';
                         nextPieceElem.appendChild(block);
                     }
                 }
@@ -809,6 +1102,40 @@
             
             // Отправляем данные о проигрыше на сервер
             sendGameOverData();
+            
+            // Создаем эффект частиц
+            createParticles();
+        }
+        
+        // Создание эффекта частиц
+        function createParticles() {
+            const particlesContainer = document.createElement('div');
+            particlesContainer.style.position = 'fixed';
+            particlesContainer.style.top = '0';
+            particlesContainer.style.left = '0';
+            particlesContainer.style.width = '100%';
+            particlesContainer.style.height = '100%';
+            particlesContainer.style.pointerEvents = 'none';
+            particlesContainer.style.zIndex = '999';
+            document.body.appendChild(particlesContainer);
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = `${Math.random() * 10 + 5}px`;
+                particle.style.height = particle.style.width;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.backgroundColor = COLORS[Math.floor(Math.random() * COLORS.length)] || '#f1c40f';
+                particle.style.setProperty('--tx', `${Math.random() * 200 - 100}px`);
+                particle.style.setProperty('--ty', `${Math.random() * 200 - 100}px`);
+                
+                particlesContainer.appendChild(particle);
+            }
+            
+            setTimeout(() => {
+                particlesContainer.remove();
+            }, 1000);
         }
         
         // Отправка данных о проигрыше на сервер
@@ -997,7 +1324,7 @@
         }
         
         // Очистка заполненных линий
-        function clearLines() {
+       function clearLines() {
             let linesCleared = 0;
             let linesToClear = [];
             
@@ -1012,10 +1339,71 @@
             }
             
             if (linesToClear.length > 0) {
-                isAnimating = true;
-                animateLineClear(linesToClear);
+                // Удаляем линии сразу без анимации
+                linesToClear.forEach(y => {
+                    board.splice(y, 1);
+                    board.unshift(new Array(COLS).fill(0));
+                });
+                
+                // Обновляем счет
+                const points = calculateScore(linesToClear.length);
+                score += points;
+                currentScoreElem.textContent = score;
+                
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreElem.textContent = highScore;
+                    localStorage.setItem('tetrisHighScore', highScore);
+                }
+                
+                // Создаем эффект частиц для визуального отклика
+                createLineClearParticles(linesToClear);
+                
+                // Создаем всплывающий текст с очками
+                createScorePopup(points);
+                
+                // Ускорение игры
+                if (score < 1800) {
+                    dropInterval = Math.max(100, 1000 - Math.floor(score / 100) * 50);
+                } else {
+                    dropInterval = Math.max(200, 2000 - Math.floor(score / 100) * 100);
+                }
+                
+                // Перерисовываем поле
+                draw();
             }
         }
+
+
+        // Создание эффекта частиц для очищенных линий
+        function createLineClearParticles(linesToClear) {
+            linesToClear.forEach(y => {
+                for (let x = 0; x < COLS; x++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = `${x * cellWidth + cellWidth/2}px`;
+                    particle.style.top = `${y * cellHeight + cellHeight/2}px`;
+                    particle.style.width = '8px';
+                    particle.style.height = '8px';
+                    particle.style.backgroundColor = getRandomColor();
+                    particle.style.setProperty('--tx', `${Math.random() * 100 - 50}px`);
+                    particle.style.setProperty('--ty', `${Math.random() * 100 - 50}px`);
+                    
+                    gameBoard.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        particle.remove();
+                    }, 1000);
+                }
+            });
+        }
+
+        function getRandomColor() {
+            const colors = ['#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+
         
         // Анимация очистки линий
         function animateLineClear(linesToClear) {
@@ -1036,6 +1424,11 @@
             // Добавляем класс анимации
             blocksToClear.forEach(block => {
                 block.classList.add('line-clear');
+            });
+            
+            // Создаем эффект частиц для каждого блока
+            blocksToClear.forEach(block => {
+                createBlockParticles(block);
             });
             
             // Создаем всплывающий текст с очками
@@ -1064,7 +1457,7 @@
                 }
                 
                 // Ускорение игры (с учетом ограничения после 1800 очков)
-                if (score < 1600) {
+                if (score < 1800) {
                     dropInterval = Math.max(100, 1000 - Math.floor(score / 100) * 50);
                 } else {
                     // После 1800 очков уменьшаем скорость в 2 раза
@@ -1074,6 +1467,30 @@
                 isAnimating = false;
                 draw();
             }, 500);
+        }
+        
+        // Создание эффекта частиц для блока
+        function createBlockParticles(block) {
+            const rect = block.getBoundingClientRect();
+            const gameBoardRect = gameBoard.getBoundingClientRect();
+            
+            for (let i = 0; i < 5; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = `${Math.random() * 8 + 4}px`;
+                particle.style.height = particle.style.width;
+                particle.style.left = `${rect.left - gameBoardRect.left + Math.random() * rect.width}px`;
+                particle.style.top = `${rect.top - gameBoardRect.top + Math.random() * rect.height}px`;
+                particle.style.backgroundColor = block.style.backgroundColor;
+                particle.style.setProperty('--tx', `${Math.random() * 60 - 30}px`);
+                particle.style.setProperty('--ty', `${Math.random() * 60 - 30}px`);
+                
+                gameBoard.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 1000);
+            }
         }
         
         // Создание всплывающего текста с очками
@@ -1116,9 +1533,9 @@
             
             // Меняем иконку в зависимости от состояния паузы
             if (isPaused) {
-                pauseIcon.src = "../static/img/continue.png";
+                pauseIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTE2MCAxNjB2MTkyaDE5MlYxNjBIMTYwem0yMjQgMTkyVjE2MGgtNjR2MTkyaDY0eiIvPjwvc3ZnPg==";
             } else {
-                pauseIcon.src = "../static/img/pause.png";
+                pauseIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTE4NCA0ODBWNDhIMzI4VjQ4MEgxODRaIi8+PC9zdmc+";
                 lastTime = performance.now();
                 dropCounter = 0;
             }
@@ -1155,10 +1572,10 @@
             
             switch (e.keyCode) {
                 case 37: // Влево
-                    movePiece(-1, 0);
+                    moveLeft();
                     break;
                 case 39: // Вправо
-                    movePiece(1, 0);
+                    moveRight();
                     break;
                 case 40: // Вниз
                     softDrop();
@@ -1187,6 +1604,11 @@
             createNextPiece();
             resetPiece();
             
+            // Остановить все интервалы
+            stopLeftMove();
+            stopRightMove();
+            stopSoftDrop();
+            
             // Скрыть модальное окно
             gameOverModal.style.display = 'none';
         }
@@ -1202,5 +1624,3 @@
     </script>
 </body>
 </html>
-
-
